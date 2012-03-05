@@ -126,7 +126,7 @@ class TestMailAction(ContentRulesTestCase):
 
         addview.createAndAdd(data={'subject': 'My Subject',
                                    'source': 'foo@bar.be',
-                                   'role': 'Owner',
+                                   'roles': ['Owner'],
                                    'acquired': True,
                                    'message': 'Hey, Oh!'})
 
@@ -134,7 +134,7 @@ class TestMailAction(ContentRulesTestCase):
         self.failUnless(isinstance(e, MailRoleAction))
         self.assertEquals('My Subject', e.subject)
         self.assertEquals('foo@bar.be', e.source)
-        self.assertEquals('Owner', e.role)
+        self.assertEquals(['Owner'], e.roles)
         self.assertEquals(True, e.acquired)
         self.assertEquals('Hey, Oh!', e.message)
 
@@ -153,7 +153,7 @@ class TestMailAction(ContentRulesTestCase):
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
         e.source = "foo@bar.be"
-        e.role = "Owner"
+        e.roles = ["Owner"]
         e.acquired = False
         e.message = u"Päge '${title}' created in ${url} !"
         ex = getMultiAdapter((self.folder, e, DummyEvent(self.folder.d1)),
@@ -178,7 +178,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
         e.source = "foo@bar.be"
-        e.role = "Reader"
+        e.roles = ["Reader"]
         e.acquired = True
         e.message = u"P√§ge '${title}' created in ${url} !"
         ex = getMultiAdapter((self.folder, e, DummyEvent(self.folder.d1)),
@@ -252,7 +252,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
         e.source = "foo@bar.be"
-        e.role = "Reader"
+        e.roles = ["Reader"]
         e.acquired = True
         e.message = u"P√§ge '${title}' created in ${url} !"
         ex = getMultiAdapter(
@@ -275,7 +275,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
         e.source = "foo@bar.be"
-        e.role = "Reviewer"
+        e.roles = ["Reviewer"]
         e.acquired = False
         e.message = u"Päge '${title}' created in ${url} !"
         ex = getMultiAdapter((self.folder, e, DummyEvent(self.folder.d2)),
@@ -291,7 +291,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
         e.source = "foo@bar.be"
-        e.role = "Owner"
+        e.roles = ["Owner"]
         e.acquired = True
         e.message = u"Päge '${title}' created in ${url} !"
         ex = getMultiAdapter((self.folder, e, DummyEvent(self.folder.d1)),
@@ -320,7 +320,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         dummyMailHost = DummySecureMailHost('dMailhost')
         sm.registerUtility(dummyMailHost, IMailHost)
         e = MailRoleAction()
-        e.role = "Owner"
+        e.roles = ["Owner"]
         e.acquired = False
         e.message = 'Document created !'
         ex = getMultiAdapter((self.folder, e, DummyEvent(self.folder.d1)),

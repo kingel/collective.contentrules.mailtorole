@@ -30,25 +30,27 @@ class IMailRoleAction(Interface):
         description=_plone("The email address that sends the email. If no \
             email is provided here, it will use the portal from address."),
         required=False)
-    role = schema.Choice(
-        title=_(u'field_role_title', default=u"Role"),
-        description=_(u'field_role_description', default="Select a role. \
+    roles = schema.List(
+        title=_(u'field_roles_title', default=u"Roles"),
+        description=_(u'field_roles_description', default="Select roles. \
             The action will look up the all Plone site users who explicitly \
-            have this role on the object and send a message to their email \
-            address."),
-        vocabulary="collective.contentrules.mailtorole.roles",
+            have at least one of the selected roles on the object and send a \
+            message to their email address."),
+        value_type=schema.Choice(
+            vocabulary="collective.contentrules.mailtorole.roles",
+        ),
         required=True)
     acquired = schema.Bool(
         title=_(u'field_acquired_title', default=u"Acquired Roles"),
         description=_(u'field_acquired_description',
-            default=u"Should users that have this role as an acquired role \
+            default=u"Should users that have this role(s) as acquired role(s) \
                 also receive this email?"),
         required=False)
     global_roles = schema.Bool(
         title=_(u'field_global_roles_title', default=u"Global Roles"),
         description=_(u'field_global_roles_description',
-            default=u"Should users that have this role as a role in the whole \
-                site also receive this email?"),
+            default=u"Should users that have this role(s) as role(s) in the \
+                whole site also receive this email?"),
         required=False)
     message = schema.Text(
         title=_plone(u"Message"),
@@ -67,7 +69,7 @@ class MailRoleAction(SimpleItem):
 
     subject = u''
     source = u''
-    role = u''
+    roles = []
     message = u''
     acquired = False
     global_roles = False
@@ -75,9 +77,9 @@ class MailRoleAction(SimpleItem):
 
     @property
     def summary(self):
-        return _((u"Email report to users with role ${role} on "
+        return _((u"Email report to users with role(s) ${roles} on "
                   u"the object"),
-                 mapping=dict(role=self.role))
+                 mapping=dict(roles=','.join(self.roles)))
 
 
 class MailActionExecutor(object):
@@ -122,7 +124,7 @@ class MailActionExecutor(object):
         """
         # search through all local roles on the object, and add
         # users's email to the recipients list if they have the local
-        # role stored in the action
+        # role(s) stored in the action
         obj = self.event.object
         local_roles = obj.get_local_roles()
         if len(local_roles) == 0:
@@ -130,7 +132,8 @@ class MailActionExecutor(object):
         recipients = set()
         for user, roles in local_roles:
             rolelist = list(roles)
-            if self.element.role in rolelist:
+
+            if set(self.element.roles).intersection(set(rolelist)):
                 recipients.add(user)
 
         # check for the acquired roles
@@ -138,16 +141,19 @@ class MailActionExecutor(object):
             sharing_page = obj.unrestrictedTraverse('@@sharing')
             acquired_roles = sharing_page._inherited_roles()
             acquired_users = [r[0] for r in acquired_roles
-                              if self.element.role in r[1]]
+
+                if set(self.element.roles).intersection(set(r[1]))]
             recipients.update(acquired_users)
 
         # check for the global roles
         if self.element.global_roles:
             pas = getToolByName(self.event.object, 'acl_users')
             rolemanager = pas.portal_role_manager
-            global_role_ids = [p[0] for p in \
-                rolemanager.listAssignedPrincipals(self.element.role)]
-            recipients.update(global_role_ids)
+
+            for role in self.element.roles:
+                global_role_ids = [p[0] for p in
+                    rolemanager.listAssignedPrincipals(role)]
+                recipients.update(global_role_ids)
 
         # check to see if the recipents are users or groups
         group_recipients = []
