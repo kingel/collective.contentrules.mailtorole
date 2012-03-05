@@ -98,29 +98,32 @@ class MailActionExecutor(object):
             raise ComponentLookupError(
                 'You must have a Mailhost utility to execute this action')
 
-        source = self.element.source
         urltool = getToolByName(aq_inner(self.context), "portal_url")
-        membertool = getToolByName(aq_inner(self.context), "portal_membership")
+        self.portal = urltool.getPortalObject()
+        source = self.element.source
 
-        portal = urltool.getPortalObject()
-        email_charset = portal.getProperty('email_charset')
         if not source:
             # no source provided, looking for the site wide from email
             # address
-            from_address = portal.getProperty('email_from_address')
+            from_address = self.portal.getProperty('email_from_address')
             if not from_address:
                 raise ValueError("You must provide a source address for this \
                     action or enter an email in the portal properties")
-            from_name = portal.getProperty('email_from_name').strip('"')
+            from_name = self.portal.getProperty('email_from_name').strip('"')
             source = '"%s" <%s>' % (from_name, from_address)
 
-        obj = self.event.object
-        event_title = safe_unicode(obj.Title())
-        event_url = obj.absolute_url()
+        self._send(self._get_recipients(), source)
 
+    def _get_recipients(self):
+        """Helper method to get all recipients.
+
+        :returns: A list of all recipients' emails
+        :rtype: list
+        """
         # search through all local roles on the object, and add
         # users's email to the recipients list if they have the local
         # role stored in the action
+        obj = self.event.object
         local_roles = obj.get_local_roles()
         if len(local_roles) == 0:
             return True
@@ -149,10 +152,10 @@ class MailActionExecutor(object):
         # check to see if the recipents are users or groups
         group_recipients = []
         new_recipients = []
-        group_tool = portal.portal_groups
+        group_tool = getToolByName(aq_inner(self.context), "portal_groups")
 
         def _getGroupMemberIds(group):
-            """ Helper method to support groups in groups. """
+            """Helper method to support groups in groups."""
             members = []
             for member_id in group.getGroupMemberIds():
                 subgroup = group_tool.getGroupById(member_id)
@@ -176,6 +179,7 @@ class MailActionExecutor(object):
             recipients.add(recipient)
 
         # look up e-mail addresses for the found users
+        membertool = getToolByName(aq_inner(self.context), "portal_membership")
         recipients_mail = set()
         for user in recipients:
             member = membertool.getMemberById(user)
@@ -187,13 +191,27 @@ class MailActionExecutor(object):
             if recipient_prop != None and len(recipient_prop) > 0:
                 recipients_mail.add(recipient_prop)
 
+        return recipients_mail
+
+    def _send(self, recipients, source):
+        """Helper method to send the email to all recipients.
+
+        :param recipients: A list of recipients' emails
+        :type recipients: list
+        :param source: From email address/name
+        :type source: string
+        """
+        event = self.event.object
+        event_title = safe_unicode(event.Title())
+        event_url = event.absolute_url()
         message = self.element.message.replace("${url}", event_url)
         message = message.replace("${title}", event_title)
-
         subject = self.element.subject.replace("${url}", event_url)
         subject = subject.replace("${title}", event_title)
+        email_charset = self.portal.getProperty('email_charset')
+        mailhost = getToolByName(aq_inner(self.context), "MailHost")
 
-        for recipient in recipients_mail:
+        for recipient in recipients:
             mailhost.secureSend(
                 message.encode(email_charset),
                 recipient,
