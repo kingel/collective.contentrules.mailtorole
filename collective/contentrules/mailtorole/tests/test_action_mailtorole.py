@@ -23,15 +23,16 @@ from Products.Five import fiveconfigure
 
 from Products.CMFCore.utils import getToolByName
 
+
 @onsetup
 def setup_product():
     """Set up the package and its dependencies.
-    
+
     The @onsetup decorator causes the execution of this body to be deferred
     until the setup of the Plone site testing layer. We could have created our
     own layer, but this is the easiest way for Plone integration tests.
     """
-        
+
     fiveconfigure.debug_mode = True
     import collective.contentrules.mailtorole
     zcml.load_config('configure.zcml', collective.contentrules.mailtorole)
@@ -87,7 +88,7 @@ class TestMailAction(ContentRulesTestCase):
             ('Member',),
             (),
             properties={'email': 'anotherdude@url.com'})
-        membership.addMember('member3', 'secret', ('Member', ), ())
+        membership.addMember('member3', 'secret', ('Member',), ())
         groups = getToolByName(self.portal, 'portal_groups')
         groups.addGroup('group1')
         groups.addPrincipalToGroup('member2', 'group1')
@@ -188,23 +189,23 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         mailSentTo = [mailSent.get('To') for mailSent in dummyMailHost.sent]
         assert("somedude@url.com" in mailSentTo)
         assert("anotherdude@url.com" in mailSentTo)
-    
+
     def testExecuteWithSubGroup(self):
         self.loginAsPortalOwner()
         membership = getToolByName(self.portal, 'portal_membership')
         groups = getToolByName(self.portal, 'portal_groups')
-        
+
         # set up additional group and its subgroups
         groups.addGroup('group2')
         groups.addGroup('subgroup1')
         groups.addGroup('subgroup2')
-        
+
         # put subgroup1 into group2
         groups.addPrincipalToGroup('subgroup1', 'group2')
-        
+
         # put subgroup2 into subgroup1
         groups.addPrincipalToGroup('subgroup2', 'subgroup1')
-        
+
         # put submember1 into group2
         membership.addMember(
             'submember1',
@@ -213,7 +214,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
             (),
             properties={'email': 'submember1@url.com'})
         groups.addPrincipalToGroup('submember1', 'group2')
-        
+
         # put submember2 into subgroup1
         membership.addMember(
             'submember2',
@@ -222,7 +223,7 @@ http://nohost/plone/Members/test_user_1_/d1 !",
             (),
             properties={'email': 'submember2@url.com'})
         groups.addPrincipalToGroup('submember2', 'subgroup1')
-        
+
         # put submember3 into subgroup2
         membership.addMember(
             'submember3',
@@ -231,15 +232,20 @@ http://nohost/plone/Members/test_user_1_/d1 !",
             (),
             properties={'email': 'submember3@url.com'})
         groups.addPrincipalToGroup('submember3', 'subgroup2')
-        
+
         # create new folder and document in it
-        self.portal.invokeFactory('Folder', 'test_subgroups', title=u'Test subgroups')
+        self.portal.invokeFactory(
+            'Folder', 'test_subgroups', title=u'Test subgroups'
+        )
         test_folder = self.portal['test_subgroups']
-        test_folder.invokeFactory('Document', 'subgroups_page', title=u'Subgroups page')
-        
-        # assign Reader role to group2 which containes several subgroups and members in several levels
+        test_folder.invokeFactory(
+            'Document', 'subgroups_page', title=u'Subgroups page'
+        )
+
+        # assign Reader role to group2 which containes several subgroups and
+        # members in several levels
         test_folder.manage_setLocalRoles('group2', ['Reader', ])
-        
+
         sm = getSiteManager(self.portal)
         sm.unregisterUtility(provided=IMailHost)
         dummyMailHost = DummySecureMailHost('dMailhost')
@@ -249,8 +255,10 @@ http://nohost/plone/Members/test_user_1_/d1 !",
         e.role = "Reader"
         e.acquired = True
         e.message = u"P√§ge '${title}' created in ${url} !"
-        ex = getMultiAdapter((test_folder, e, DummyEvent(test_folder.subgroups_page)),
-                             IExecutable)
+        ex = getMultiAdapter(
+            (test_folder, e, DummyEvent(test_folder.subgroups_page)),
+            IExecutable
+        )
         ex()
         self.failUnless(isinstance(dummyMailHost.sent[0], MIMEText))
         self.assertEqual(len(dummyMailHost.sent), 3)
@@ -300,8 +308,10 @@ http://nohost/plone/Members/test_user_1_/d1 !",
             self.failUnless(mailSent.get('To') in ("getme@frommember.com",
                                                    "portal@owner.com"))
             self.assertEqual("foo@bar.be", mailSent.get('From'))
-            self.assertEqual("P\xc3\xa4ge 'W\xc3\xa4lkommen' created in http://nohost/plone/Members/test_user_1_/d1 !",
-                             mailSent.get_payload(decode=True))
+            self.assertEqual("P\xc3\xa4ge 'W\xc3\xa4lkommen' created in "
+                "http://nohost/plone/Members/test_user_1_/d1 !",
+                mailSent.get_payload(decode=True)
+            )
 
     def testExecuteNoSource(self):
         self.loginAsPortalOwner()
@@ -317,7 +327,10 @@ http://nohost/plone/Members/test_user_1_/d1 !",
                              IExecutable)
         self.assertRaises(ValueError, ex)
         # if we provide a site mail address this won't fail anymore
-        sm.manage_changeProperties({'email_from_address': 'manager@portal.be', 'email_from_name':'ploneRulez'})
+        sm.manage_changeProperties(
+            {'email_from_address': 'manager@portal.be',
+             'email_from_name': 'ploneRulez'}
+        )
         ex()
         self.failUnless(isinstance(dummyMailHost.sent[0], MIMEText))
         mailSent = dummyMailHost.sent[0]

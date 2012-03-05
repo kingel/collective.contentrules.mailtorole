@@ -19,50 +19,50 @@ from collective.contentrules.mailtorole import mailtoroleMessageFactory as _
 
 
 class IMailRoleAction(Interface):
-    """Definition of the configuration available for a mail action
-    """
+    """Definition of the configuration available for a mail action"""
+
     subject = schema.TextLine(
         title=_plone(u"Subject"),
         description=_plone(u"Subject of the message"),
         required=True)
     source = schema.TextLine(
         title=_plone(u"Email source"),
-        description=_plone("The email address that sends the \
-email. If no email is provided here, it will use the portal from address."),
+        description=_plone("The email address that sends the email. If no \
+            email is provided here, it will use the portal from address."),
         required=False)
     role = schema.Choice(
         title=_(u'field_role_title', default=u"Role"),
         description=_(u'field_role_description', default="Select a role. \
-The action will look up the all Plone site users who explicitly have this \
-role on the object and send a message to their email address."),
+            The action will look up the all Plone site users who explicitly \
+            have this role on the object and send a message to their email \
+            address."),
         vocabulary="collective.contentrules.mailtorole.roles",
         required=True)
     acquired = schema.Bool(
         title=_(u'field_acquired_title', default=u"Acquired Roles"),
-        description=_(u'field_acquired_description', 
-            default=u"Should users that have this \
-role as an acquired role also receive this email?"),
+        description=_(u'field_acquired_description',
+            default=u"Should users that have this role as an acquired role \
+                also receive this email?"),
         required=False)
     global_roles = schema.Bool(
         title=_(u'field_global_roles_title', default=u"Global Roles"),
-        description=_(u'field_global_roles_description', 
-            default=u"Should users that have this \
-role as a role in the whole site also receive this email?"),
+        description=_(u'field_global_roles_description',
+            default=u"Should users that have this role as a role in the whole \
+                site also receive this email?"),
         required=False)
     message = schema.Text(
         title=_plone(u"Message"),
-        description=_(u'field_message_description', 
-            default=u"Type in here the message that you \
-want to mail. Some defined content can be replaced: ${title} will be replaced \
-by the title of the newly created item. ${url} will be replaced by the \
-URL of the newly created item."),
+        description=_(u'field_message_description',
+            default=u"Type in here the message that you want to mail. Some \
+                defined content can be replaced: ${title} will be replaced \
+                by the title of the newly created item. ${url} will be \
+                replaced by the URL of the newly created item."),
         required=True)
 
 
 class MailRoleAction(SimpleItem):
-    """
-    The implementation of the action defined before
-    """
+    """The implementation of the action defined before"""
+
     implements(IMailRoleAction, IRuleElementData)
 
     subject = u''
@@ -79,9 +79,10 @@ class MailRoleAction(SimpleItem):
                   u"the object"),
                  mapping=dict(role=self.role))
 
+
 class MailActionExecutor(object):
-    """The executor for this action.
-    """
+    """The executor for this action."""
+
     implements(IExecutable)
     adapts(Interface, IMailRoleAction, Interface)
 
@@ -109,7 +110,7 @@ class MailActionExecutor(object):
             from_address = portal.getProperty('email_from_address')
             if not from_address:
                 raise ValueError("You must provide a source address for this \
-action or enter an email in the portal properties")
+                    action or enter an email in the portal properties")
             from_name = portal.getProperty('email_from_name').strip('"')
             source = '"%s" <%s>' % (from_name, from_address)
 
@@ -141,15 +142,15 @@ action or enter an email in the portal properties")
         if self.element.global_roles:
             pas = getToolByName(self.event.object, 'acl_users')
             rolemanager = pas.portal_role_manager
-            global_role_ids = [ p[0] for p in \
-                rolemanager.listAssignedPrincipals(self.element.role) ]
+            global_role_ids = [p[0] for p in \
+                rolemanager.listAssignedPrincipals(self.element.role)]
             recipients.update(global_role_ids)
 
         # check to see if the recipents are users or groups
         group_recipients = []
         new_recipients = []
         group_tool = portal.portal_groups
-        
+
         def _getGroupMemberIds(group):
             """ Helper method to support groups in groups. """
             members = []
@@ -164,10 +165,10 @@ action or enter an email in the portal properties")
         for recipient in recipients:
             group = group_tool.getGroupById(recipient)
             if group is not None:
-                group_recipients.append(recipient)                
+                group_recipients.append(recipient)
                 [new_recipients.append(user_id)
                  for user_id in _getGroupMemberIds(group)]
-        
+
         for recipient in group_recipients:
             recipients.remove(recipient)
 
@@ -193,19 +194,24 @@ action or enter an email in the portal properties")
         subject = subject.replace("${title}", event_title)
 
         for recipient in recipients_mail:
-            mailhost.secureSend(message.encode(email_charset), recipient, source,
-                                subject=subject, subtype='plain',
-                                charset=email_charset, debug=False)
+            mailhost.secureSend(
+                message.encode(email_charset),
+                recipient,
+                source,
+                subject=subject,
+                subtype='plain',
+                charset=email_charset,
+                debug=False
+            )
         return True
 
 
 class MailRoleAddForm(AddForm):
-    """
-    An add form for the mail action
-    """
+    """An add form for the mail action"""
+
     form_fields = form.FormFields(IMailRoleAction)
     label = _plone(u"Add Mail Action")
-    description = _(u'form_description', 
+    description = _(u'form_description',
         default=u"A mail action that can mail plone users who have "
                 u"a role on the object")
     form_name = _plone(u"Configure element")
@@ -217,9 +223,8 @@ class MailRoleAddForm(AddForm):
 
 
 class MailRoleEditForm(EditForm):
-    """
-    An edit form for the mail action
-    """
+    """An edit form for the mail action"""
+
     form_fields = form.FormFields(IMailRoleAction)
     label = _plone(u"Edit Mail Role Action")
     description = _plone(u"A mail action that can mail plone users who have "

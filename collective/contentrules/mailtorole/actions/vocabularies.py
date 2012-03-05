@@ -4,8 +4,7 @@ from Products.CMFPlone.utils import safe_unicode
 
 
 def RolesVocabularyFactory(context):
-    """ Vocabulary Factory for Roles in the Plone Site
-    """
+    """Vocabulary Factory for Roles in the Plone Site"""
 
     # context is the content rule object which is stored in the plone site
 
