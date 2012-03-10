@@ -5,12 +5,14 @@ from zope.component.interfaces import ComponentLookupError
 from zope.interface import Interface, implements
 from zope.formlib import form
 from zope import schema
+from plone.stringinterp.interfaces import IStringInterpolator
 
 from plone.app.contentrules.browser.formhelper import AddForm, EditForm
 from plone.contentrules.rule.interfaces import IRuleElementData, IExecutable
 
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.utils import safe_unicode
+from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 
 # import the default messagefactory as _plone. These strings will not be put in
 # the locales .po file by i18ndude
@@ -63,7 +65,7 @@ class IMailRoleAction(Interface):
 
 
 class MailRoleAction(SimpleItem):
-    """The implementation of the action defined before"""
+    """The implementation of the action defined before."""
 
     implements(IMailRoleAction, IRuleElementData)
 
@@ -207,13 +209,10 @@ class MailActionExecutor(object):
         :param source: From email address/name
         :type source: string
         """
-        event = self.event.object
-        event_title = safe_unicode(event.Title())
-        event_url = event.absolute_url()
-        message = self.element.message.replace("${url}", event_url)
-        message = message.replace("${title}", event_title)
-        subject = self.element.subject.replace("${url}", event_url)
-        subject = subject.replace("${title}", event_title)
+        interpolator = IStringInterpolator(self.event.object)
+        message = "\n%s" % interpolator(self.element.message)
+        subject = interpolator(self.element.subject)
+
         email_charset = self.portal.getProperty('email_charset')
         mailhost = getToolByName(aq_inner(self.context), "MailHost")
 
@@ -240,6 +239,9 @@ class MailRoleAddForm(AddForm):
                 u"a role on the object")
     form_name = _plone(u"Configure element")
 
+    # custom template will allow us to add help text
+    template = ViewPageTemplateFile('templates/mail.pt')
+
     def create(self, data):
         a = MailRoleAction()
         form.applyChanges(a, self.form_fields, data)
@@ -254,3 +256,6 @@ class MailRoleEditForm(EditForm):
     description = _plone(u"A mail action that can mail plone users who have "
                          u"a role on the object")
     form_name = _plone(u"Configure element")
+
+    # custom template will allow us to add help text
+    template = ViewPageTemplateFile('templates/mail.pt')

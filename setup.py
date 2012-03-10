@@ -24,7 +24,7 @@ setup(name='collective.contentrules.mailtorole',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          # -*- Extra requirements: -*-
+          'plone.stringinterp',
       ],
       entry_points="""
       # -*- Entry points: -*-
